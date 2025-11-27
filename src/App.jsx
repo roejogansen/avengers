@@ -1,155 +1,269 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Smartphone, User, MessageSquare, Check,
-  Plane, Wine, Frown
+  Sparkles, Instagram, Users, Mail, Globe, Clock,
+  CheckCircle, AlertTriangle, Trash2, Send, UserPlus,
+  ArrowRight, Download, Check
 } from 'lucide-react';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import PhoneChat from './components/features/PhoneChat';
-import ChatCard from './components/features/ChatCard';
-import Button from './components/ui/Button';
-import Badge from './components/ui/Badge';
 
-const App = () => {
+export default function CRM() {
+  const [leads, setLeads] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
+
+  const [formData, setFormData] = useState({
+    handle: '', country: '', email: '', isUnicorn: false, has10k: false,
+  });
+
+  // Get unique countries from existing leads
+  const uniqueCountries = useMemo(() => {
+    const countries = leads.map(l => l.country).filter(Boolean);
+    return [...new Set(countries)].sort();
+  }, [leads]);
+
+  // --- Logic ---
+  const addLead = (e) => {
+    e.preventDefault();
+    if (!formData.handle) return;
+
+    // Clean handle - extract username from URL or handle
+    let cleanHandle = formData.handle.trim();
+    // Remove @ symbol
+    cleanHandle = cleanHandle.replace('@', '');
+    // Extract from full URL (https://www.instagram.com/username/ or https://instagram.com/username)
+    const urlMatch = cleanHandle.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/);
+    if (urlMatch) {
+      cleanHandle = urlMatch[1];
+    } else {
+      // Remove any remaining slashes
+      cleanHandle = cleanHandle.replace(/\//g, '');
+    }
+
+    // Check for duplicates
+    const isDuplicate = leads.some(lead => lead.handle.toLowerCase() === cleanHandle.toLowerCase());
+    if (isDuplicate) {
+      alert(`@${cleanHandle} is already in your pipeline!`);
+      return;
+    }
+
+    const newLead = {
+      id: Date.now(),
+      ...formData,
+      handle: cleanHandle,
+      status: 'new', // new, dm_sent, friends_dmed
+      emailSent: false,
+      createdAt: Date.now(),
+      dmSentAt: null
+    };
+
+    setLeads(prev => [newLead, ...prev]);
+    // Reset form completely
+    setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false });
+  };
+
+  const updateStatus = (id, newStatus) => {
+    setLeads(leads.map(lead => {
+      if (lead.id === id) {
+        return {
+          ...lead,
+          status: newStatus,
+          dmSentAt: newStatus === 'dm_sent' ? Date.now() : lead.dmSentAt
+        };
+      }
+      return lead;
+    }));
+  };
+
+  const toggleEmailSent = (id) => {
+    setLeads(leads.map(lead =>
+      lead.id === id ? { ...lead, emailSent: !lead.emailSent } : lead
+    ));
+  };
+
+  const deleteLead = (id) => {
+    if (confirm('Delete?')) setLeads(leads.filter(l => l.id !== id));
+  };
+
+  const getTimerStatus = (timestamp) => {
+    if (!timestamp) return { label: 'Not Sent', color: 'text-gray-400', urgent: false };
+    const diffHours = (Date.now() - timestamp) / (1000 * 60 * 60);
+    if (diffHours >= 12) return { label: `+${Math.floor(diffHours)}h passed`, color: 'text-red-500 font-bold', urgent: true };
+    return { label: `${Math.floor(12 - diffHours)}h remaining`, color: 'text-emerald-500', urgent: false };
+  };
+
+  const formatDateTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+
+    if (isToday) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+      date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Sort: Urgent first, then status
+  const sortedLeads = [...leads].sort((a, b) => {
+    // Mock scoring for sort
+    const getScore = (l) => {
+      if (l.status === 'friends_dmed') return 0;
+      const timer = getTimerStatus(l.dmSentAt);
+      if (timer.urgent) return 100;
+      if (l.status === 'dm_sent') return 50;
+      return 25;
+    };
+    return getScore(b) - getScore(a);
+  });
+
+  const filteredLeads = sortedLeads.filter(l => {
+    // Status filters
+    if (filter === 'all') {
+      // Continue to country filter
+    } else {
+      const timer = getTimerStatus(l.dmSentAt);
+      if (filter === 'urgent' && !timer.urgent) return false;
+      if (filter === 'new' && l.status !== 'new') return false;
+      if (filter === 'pending' && !(l.status === 'dm_sent' && !timer.urgent)) return false;
+      if (filter === 'unicorn' && !l.isUnicorn) return false;
+      if (filter === '10k' && !l.has10k) return false;
+      if (filter === 'both' && !(l.isUnicorn && l.has10k)) return false;
+    }
+
+    // Country filter
+    if (countryFilter !== 'all' && l.country !== countryFilter) return false;
+
+    return true;
+  });
+
   return (
-    <div className="bg-white min-h-screen text-stone-900 font-sans antialiased selection:bg-stone-200">
-      <Navbar />
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {/* Hero Section */}
-      <section className="pt-32 md:pt-40 pb-20 bg-white overflow-hidden">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <Badge>Now available in Norway</Badge>
-          <h1 className="text-5xl md:text-7xl font-medium text-stone-900 mb-8 tracking-tight font-serif leading-[1.1]">
-            The coach who talks<br />
-            <span className="text-stone-400 italic">to you every day.</span>
-          </h1>
-          <p className="text-lg md:text-xl text-stone-600 max-w-xl mx-auto mb-12 font-light leading-relaxed">
-            Most apps give you a plan and disappear. We stay. <br className="hidden md:block" />
-            Daily feedback. Real human connection. Radical consistency.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button variant="primary">Start Your Journey</Button>
-            <Button variant="secondary">How it works</Button>
-          </div>
-        </div>
-
-        <div className="mt-16 md:mt-24 max-w-5xl mx-auto px-6">
-          <PhoneChat />
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-24 md:py-32 bg-white border-t border-stone-100">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-12">
-            <div>
-              <div className="w-12 h-12 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-center mb-6 text-stone-900">
-                <Smartphone className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-stone-900 mb-3">1. Daily Audit</h3>
-              <p className="text-stone-600 leading-relaxed">
-                Every evening at 8 PM, you get a simple link. Log your energy, food, and mood in 90 seconds. No complex tracking.
-              </p>
-            </div>
-            <div>
-              <div className="w-12 h-12 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-center mb-6 text-stone-900">
-                <User className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-stone-900 mb-3">2. Human Review</h3>
-              <p className="text-stone-600 leading-relaxed">
-                A real coach (not a bot) reviews your day. They look at your context, your stress, and your sleep.
-              </p>
-            </div>
-            <div>
-              <div className="w-12 h-12 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-center mb-6 text-stone-900">
-                <MessageSquare className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-stone-900 mb-3">3. The Feedback</h3>
-              <p className="text-stone-600 leading-relaxed">
-                You wake up to a personal message. Encouragement if you struggled, specific adjustments for the day ahead.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stories Section */}
-      <section id="stories" className="py-24 bg-stone-50">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="mb-16 text-center">
-            <Badge>Real Situations</Badge>
-            <h3 className="text-3xl md:text-4xl font-serif font-medium text-stone-900 mt-4">
-              We don't judge. We solve.
-            </h3>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            <ChatCard
-              icon={Plane}
-              title="Travel Logistics"
-              time="07:30"
-              client="Arrived in Bergen. The hotel gym is literally just a treadmill and some light dumbbells. Should I skip?"
-              coach="No skipping! I just updated your app. Check it now—I built a 20-min dumbbell circuit that will torch you. Send selfie after! 📸"
+        {/* FORM */}
+        <section className="bg-slate-800 rounded-xl p-6 border border-slate-700 h-fit sticky top-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><UserPlus /> Quick Add</h2>
+          <form onSubmit={addLead} className="space-y-4">
+            <input
+              className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white focus:border-indigo-500 outline-none"
+              placeholder="Instagram Handle (@)"
+              value={formData.handle}
+              onChange={e => setFormData({ ...formData, handle: e.target.value })}
+              autoFocus
             />
-            <ChatCard
-              icon={Wine}
-              title="Social Dining"
-              time="18:45"
-              client="Heading to dinner at Olivia with my boss. I don't want to be 'that guy' who orders nothing. Help?"
-              coach="Easy. Order the Insalata di Pollo. Ask for dressing on the side and skip the focaccia basket. You'll look professional and hit your protein goal. Enjoy!"
+            <input
+              className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white focus:border-indigo-500 outline-none"
+              placeholder="Email (Optional)"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
             />
-            <ChatCard
-              icon={Frown}
-              title="Motivation Dip"
-              time="21:15"
-              client="I honestly just want to eat chocolate and watch TV. Longest day ever. I don't have it in me."
-              coach="I hear you. Set a timer for 5 minutes. Just do 5 minutes of stretching. If you still want to stop after that, fine. But don't break the streak of moving."
-            />
-          </div>
-        </div>
-      </section>
+            <div className="relative">
+              <input
+                className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white focus:border-indigo-500 outline-none"
+                placeholder="Country (Optional)"
+                value={formData.country}
+                onChange={e => setFormData({ ...formData, country: e.target.value })}
+                list="countries-list"
+              />
+              <datalist id="countries-list">
+                {uniqueCountries.map(country => (
+                  <option key={country} value={country} />
+                ))}
+              </datalist>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setFormData({ ...formData, isUnicorn: !formData.isUnicorn })} className={`flex-1 p-2 rounded border ${formData.isUnicorn ? 'bg-pink-900 border-pink-500 text-pink-400' : 'border-slate-700 text-slate-500'}`}>Unicorn 🦄</button>
+              <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-2 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>10k+ ⭐️</button>
+            </div>
+            <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-3 rounded flex justify-center items-center gap-2">Add to Pipeline <ArrowRight size={16} /></button>
+          </form>
+        </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 md:py-32 bg-white">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="bg-stone-900 rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-16 text-white text-center md:text-left relative overflow-hidden">
-            <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-serif font-medium mb-6">Private Coaching</h2>
-                <p className="text-stone-400 mb-8 text-lg font-light leading-relaxed">
-                  We cap our client roster to ensure every member gets true, personal attention.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    "Dedicated Personal Coach",
-                    "Daily 1:1 Feedback & Support",
-                    "Flexible Nutrition Guidance",
-                    "Restaurant & Travel Support",
-                    "Cancel anytime"
-                  ].map((item) => (
-                    <div key={item} className="flex items-center gap-3 text-stone-300">
-                      <Check className="w-5 h-5 text-white" />
-                      <span>{item}</span>
+        {/* LIST */}
+        <section className="lg:col-span-2 space-y-3">
+          <div className="flex gap-2 pb-2 flex-wrap items-center">
+            {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both'].map(f => (
+              <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1 rounded-full text-xs font-bold uppercase ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f}
+              </button>
+            ))}
+
+            {/* Country Filter Dropdown */}
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700 outline-none focus:border-indigo-500"
+            >
+              <option value="all">All Countries</option>
+              {uniqueCountries.map(country => (
+                <option key={country} value={country}>{country}</option>
+              ))}
+            </select>
+          </div>
+
+          {filteredLeads.map(lead => {
+            const timer = getTimerStatus(lead.dmSentAt);
+            const isUrgent = lead.status === 'dm_sent' && timer.urgent;
+
+            return (
+              <div key={lead.id} className={`bg-slate-800 rounded-lg p-2 border relative flex items-center justify-between gap-3 ${isUrgent ? 'border-red-500' : 'border-slate-700'}`}>
+                {/* Left Side: Info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={`https://www.instagram.com/${lead.handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-base text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                    >
+                      @{lead.handle}
+                      <Instagram size={14} className="opacity-60" />
+                    </a>
+
+                    {/* Badges */}
+                    <div className="flex gap-1 text-[10px]">
+                      {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1 rounded bg-pink-500/10">Unicorn</span>}
+                      {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1 rounded bg-blue-500/10">10k+</span>}
+                      {lead.country && <span className="text-slate-400 border border-slate-700 px-1 rounded">{lead.country}</span>}
                     </div>
-                  ))}
+
+                    <span className="text-[10px] text-slate-500 flex items-center gap-1 ml-1">
+                      <Clock size={10} />
+                      {formatDateTime(lead.createdAt)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Side: Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Email Action */}
+                  {lead.email && (
+                    <button onClick={() => toggleEmailSent(lead.id)} className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}>
+                      <Mail size={10} /> {lead.emailSent ? 'Sent' : 'Email'}
+                    </button>
+                  )}
+
+                  {/* DM Action */}
+                  {lead.status === 'new' && (
+                    <button onClick={() => updateStatus(lead.id, 'dm_sent')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Send size={10} /> DM</button>
+                  )}
+                  {lead.status === 'dm_sent' && (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold ${timer.color}`}>{timer.urgent ? "⚠️ TIME UP" : timer.label}</span>
+                      <button onClick={() => updateStatus(lead.id, 'friends_dmed')} className="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded">Friends</button>
+                    </div>
+                  )}
+                  {lead.status === 'friends_dmed' && <span className="text-slate-500 text-[10px] line-through">Done</span>}
+
+                  {/* Delete */}
+                  <button onClick={() => deleteLead(lead.id)} className="text-slate-600 hover:text-red-400 p-1 rounded hover:bg-slate-700/50"><Trash2 size={14} /></button>
                 </div>
               </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-center backdrop-blur-sm">
-                <p className="text-sm text-stone-400 font-bold tracking-widest uppercase mb-4">All Inclusive Membership</p>
-                <div className="text-5xl font-bold mb-2">3,900 <span className="text-lg font-normal text-stone-400">NOK</span></div>
-                <p className="text-stone-500 text-sm mb-8">Per month. VAT included.</p>
-                <Button className="w-full bg-white text-stone-900 hover:bg-stone-100 border-transparent">
-                  Apply for Coaching
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
+            )
+          })}
+          {filteredLeads.length === 0 && <div className="text-center text-slate-500 py-10">No leads match your filters.</div>}
+          {leads.length === 0 && <div className="text-center text-slate-500 py-10">No leads yet. Add one!</div>}
+        </section>
+      </div>
     </div>
   );
-};
-
-export default App;
+}
