@@ -13,7 +13,7 @@ export default function CRM() {
   const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    handle: '', country: '', email: '', isUnicorn: false, has10k: false,
+    handle: '', country: '', email: '', isUnicorn: false, has10k: false, isInspiration: false,
   });
 
   // Fetch leads on mount
@@ -39,6 +39,7 @@ export default function CRM() {
         email: lead.email,
         isUnicorn: lead.is_unicorn,
         has10k: lead.has_10k,
+        isInspiration: lead.is_inspiration || false,
         status: lead.status,
         emailSent: lead.email_sent,
         createdAt: new Date(lead.created_at).getTime(),
@@ -92,6 +93,7 @@ export default function CRM() {
         email: formData.email,
         is_unicorn: formData.isUnicorn,
         has_10k: formData.has10k,
+        is_inspiration: formData.isInspiration,
         status: 'new',
         email_sent: false,
         created_at: new Date().toISOString(),
@@ -109,7 +111,7 @@ export default function CRM() {
       fetchLeads();
 
       // Reset form completely
-      setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false });
+      setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false, isInspiration: false });
     } catch (error) {
       console.error('Error adding lead:', error.message);
       alert('Error adding lead!');
@@ -224,7 +226,12 @@ export default function CRM() {
     // Status filters
     if (filter === 'all') {
       // Continue to country filter
+    } else if (filter === 'inspiration') {
+      if (!l.isInspiration) return false;
     } else {
+      // Exclude inspiration leads from workflow filters
+      if (l.isInspiration) return false;
+
       const timer = getTimerStatus(l.dmSentAt);
       if (filter === 'urgent' && !timer.urgent) return false;
       if (filter === 'new' && l.status !== 'new') return false;
@@ -279,6 +286,9 @@ export default function CRM() {
               <button type="button" onClick={() => setFormData({ ...formData, isUnicorn: !formData.isUnicorn })} className={`flex-1 p-2 rounded border ${formData.isUnicorn ? 'bg-pink-900 border-pink-500 text-pink-400' : 'border-slate-700 text-slate-500'}`}>Unicorn 🦄</button>
               <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-2 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>10k+ ⭐️</button>
             </div>
+            <div>
+              <button type="button" onClick={() => setFormData({ ...formData, isInspiration: !formData.isInspiration })} className={`w-full p-2 rounded border ${formData.isInspiration ? 'bg-purple-900 border-purple-500 text-purple-400' : 'border-slate-700 text-slate-500'}`}>Inspiration 💡</button>
+            </div>
             <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-3 rounded flex justify-center items-center gap-2">Add to Pipeline <ArrowRight size={16} /></button>
           </form>
         </section>
@@ -286,9 +296,9 @@ export default function CRM() {
         {/* LIST */}
         <section className="lg:col-span-2 space-y-3">
           <div className="flex gap-2 pb-2 flex-wrap items-center">
-            {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both'].map(f => (
+            {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both', 'inspiration'].map(f => (
               <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1 rounded-full text-xs font-bold uppercase ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f}
+                {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f === 'inspiration' ? '💡 Inspiration' : f}
               </button>
             ))}
 
@@ -332,6 +342,7 @@ export default function CRM() {
                         <div className="flex gap-1 text-[10px]">
                           {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1 rounded bg-pink-500/10">Unicorn</span>}
                           {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1 rounded bg-blue-500/10">10k+</span>}
+                          {lead.isInspiration && <span className="text-purple-400 border border-purple-500/30 px-1 rounded bg-purple-500/10">Inspiration</span>}
                           {lead.country && <span className="text-slate-400 border border-slate-700 px-1 rounded">{lead.country}</span>}
                         </div>
 
