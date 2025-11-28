@@ -284,7 +284,7 @@ export default function CRM() {
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setFormData({ ...formData, isUnicorn: !formData.isUnicorn })} className={`flex-1 p-2 rounded border ${formData.isUnicorn ? 'bg-pink-900 border-pink-500 text-pink-400' : 'border-slate-700 text-slate-500'}`}>🦄</button>
-              <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-2 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>⭐️</button>
+              <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-2 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>10k ⭐️</button>
               <button type="button" onClick={() => setFormData({ ...formData, isInspiration: !formData.isInspiration })} className={`flex-1 p-2 rounded border ${formData.isInspiration ? 'bg-purple-900 border-purple-500 text-purple-400' : 'border-slate-700 text-slate-500'}`}>💡</button>
             </div>
             <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-3 rounded flex justify-center items-center gap-2">Add to Pipeline <ArrowRight size={16} /></button>
