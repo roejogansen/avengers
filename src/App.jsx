@@ -4,15 +4,55 @@ import {
   CheckCircle, AlertTriangle, Trash2, Send, UserPlus,
   ArrowRight, Download, Check
 } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 export default function CRM() {
   const [leads, setLeads] = useState([]);
   const [filter, setFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     handle: '', country: '', email: '', isUnicorn: false, has10k: false,
   });
+
+  // Fetch leads on mount
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Map snake_case DB columns to camelCase for the UI
+      const formattedLeads = data.map(lead => ({
+        id: lead.id,
+        handle: lead.handle,
+        country: lead.country,
+        email: lead.email,
+        isUnicorn: lead.is_unicorn,
+        has10k: lead.has_10k,
+        status: lead.status,
+        emailSent: lead.email_sent,
+        createdAt: new Date(lead.created_at).getTime(),
+        dmSentAt: lead.dm_sent_at ? new Date(lead.dm_sent_at).getTime() : null
+      }));
+
+      setLeads(formattedLeads);
+    } catch (error) {
+      console.error('Error fetching leads:', error.message);
+      alert('Error loading leads!');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Get unique countries from existing leads
   const uniqueCountries = useMemo(() => {
@@ -21,7 +61,7 @@ export default function CRM() {
   }, [leads]);
 
   // --- Logic ---
-  const addLead = (e) => {
+  const addLead = async (e) => {
     e.preventDefault();
     if (!formData.handle) return;
 
@@ -45,42 +85,107 @@ export default function CRM() {
       return;
     }
 
-    const newLead = {
-      id: Date.now(),
-      ...formData,
-      handle: cleanHandle,
-      status: 'new', // new, dm_sent, friends_dmed
-      emailSent: false,
-      createdAt: Date.now(),
-      dmSentAt: null
-    };
+    try {
+      const newLead = {
+        handle: cleanHandle,
+        country: formData.country,
+        email: formData.email,
+        is_unicorn: formData.isUnicorn,
+        has_10k: formData.has10k,
+        status: 'new',
+        email_sent: false,
+        created_at: new Date().toISOString(),
+      };
 
-    setLeads(prev => [newLead, ...prev]);
-    // Reset form completely
-    setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false });
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([newLead])
+        .select();
+
+      if (error) throw error;
+
+      // Optimistically update UI or re-fetch
+      // Re-fetching is safer to get the real ID
+      fetchLeads();
+
+      // Reset form completely
+      setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false });
+    } catch (error) {
+      console.error('Error adding lead:', error.message);
+      alert('Error adding lead!');
+    }
   };
 
-  const updateStatus = (id, newStatus) => {
-    setLeads(leads.map(lead => {
-      if (lead.id === id) {
-        return {
-          ...lead,
-          status: newStatus,
-          dmSentAt: newStatus === 'dm_sent' ? Date.now() : lead.dmSentAt
-        };
+  const updateStatus = async (id, newStatus) => {
+    try {
+      const updates = {
+        status: newStatus,
+        dm_sent_at: newStatus === 'dm_sent' ? new Date().toISOString() : undefined
+      };
+
+      // If we are just moving to friends_dmed, we don't change dm_sent_at
+      if (newStatus === 'friends_dmed') {
+        delete updates.dm_sent_at;
       }
-      return lead;
-    }));
+
+      const { error } = await supabase
+        .from('leads')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setLeads(leads.map(lead => {
+        if (lead.id === id) {
+          return {
+            ...lead,
+            status: newStatus,
+            dmSentAt: newStatus === 'dm_sent' ? Date.now() : lead.dmSentAt
+          };
+        }
+        return lead;
+      }));
+    } catch (error) {
+      console.error('Error updating status:', error.message);
+    }
   };
 
-  const toggleEmailSent = (id) => {
-    setLeads(leads.map(lead =>
-      lead.id === id ? { ...lead, emailSent: !lead.emailSent } : lead
-    ));
+  const toggleEmailSent = async (id) => {
+    const lead = leads.find(l => l.id === id);
+    if (!lead) return;
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ email_sent: !lead.emailSent })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setLeads(leads.map(l =>
+        l.id === id ? { ...l, emailSent: !l.emailSent } : l
+      ));
+    } catch (error) {
+      console.error('Error updating email status:', error.message);
+    }
   };
 
-  const deleteLead = (id) => {
-    if (confirm('Delete?')) setLeads(leads.filter(l => l.id !== id));
+  const deleteLead = async (id) => {
+    if (!confirm('Delete?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setLeads(leads.filter(l => l.id !== id));
+    } catch (error) {
+      console.error('Error deleting lead:', error.message);
+    }
   };
 
   const getTimerStatus = (timestamp) => {
@@ -200,68 +305,74 @@ export default function CRM() {
             </select>
           </div>
 
-          {filteredLeads.map(lead => {
-            const timer = getTimerStatus(lead.dmSentAt);
-            const isUrgent = lead.status === 'dm_sent' && timer.urgent;
+          {loading ? (
+            <div className="text-center text-slate-500 py-10">Loading leads...</div>
+          ) : (
+            <>
+              {filteredLeads.map(lead => {
+                const timer = getTimerStatus(lead.dmSentAt);
+                const isUrgent = lead.status === 'dm_sent' && timer.urgent;
 
-            return (
-              <div key={lead.id} className={`bg-slate-800 rounded-lg p-2 border relative flex items-center justify-between gap-3 ${isUrgent ? 'border-red-500' : 'border-slate-700'}`}>
-                {/* Left Side: Info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a
-                      href={`https://www.instagram.com/${lead.handle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold text-base text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
-                    >
-                      @{lead.handle}
-                      <Instagram size={14} className="opacity-60" />
-                    </a>
+                return (
+                  <div key={lead.id} className={`bg-slate-800 rounded-lg p-2 border relative flex items-center justify-between gap-3 ${isUrgent ? 'border-red-500' : 'border-slate-700'}`}>
+                    {/* Left Side: Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href={`https://www.instagram.com/${lead.handle}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-base text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                        >
+                          @{lead.handle}
+                          <Instagram size={14} className="opacity-60" />
+                        </a>
 
-                    {/* Badges */}
-                    <div className="flex gap-1 text-[10px]">
-                      {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1 rounded bg-pink-500/10">Unicorn</span>}
-                      {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1 rounded bg-blue-500/10">10k+</span>}
-                      {lead.country && <span className="text-slate-400 border border-slate-700 px-1 rounded">{lead.country}</span>}
+                        {/* Badges */}
+                        <div className="flex gap-1 text-[10px]">
+                          {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1 rounded bg-pink-500/10">Unicorn</span>}
+                          {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1 rounded bg-blue-500/10">10k+</span>}
+                          {lead.country && <span className="text-slate-400 border border-slate-700 px-1 rounded">{lead.country}</span>}
+                        </div>
+
+                        <span className="text-[10px] text-slate-500 flex items-center gap-1 ml-1">
+                          <Clock size={10} />
+                          {formatDateTime(lead.createdAt)}
+                        </span>
+                      </div>
                     </div>
 
-                    <span className="text-[10px] text-slate-500 flex items-center gap-1 ml-1">
-                      <Clock size={10} />
-                      {formatDateTime(lead.createdAt)}
-                    </span>
+                    {/* Right Side: Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Email Action */}
+                      {lead.email && (
+                        <button onClick={() => toggleEmailSent(lead.id)} className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}>
+                          <Mail size={10} /> {lead.emailSent ? 'Sent' : 'Email'}
+                        </button>
+                      )}
+
+                      {/* DM Action */}
+                      {lead.status === 'new' && (
+                        <button onClick={() => updateStatus(lead.id, 'dm_sent')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Send size={10} /> DM</button>
+                      )}
+                      {lead.status === 'dm_sent' && (
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold ${timer.color}`}>{timer.urgent ? "⚠️ TIME UP" : timer.label}</span>
+                          <button onClick={() => updateStatus(lead.id, 'friends_dmed')} className="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded">Friends</button>
+                        </div>
+                      )}
+                      {lead.status === 'friends_dmed' && <span className="text-slate-500 text-[10px] line-through">Done</span>}
+
+                      {/* Delete */}
+                      <button onClick={() => deleteLead(lead.id)} className="text-slate-600 hover:text-red-400 p-1 rounded hover:bg-slate-700/50"><Trash2 size={14} /></button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Right Side: Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {/* Email Action */}
-                  {lead.email && (
-                    <button onClick={() => toggleEmailSent(lead.id)} className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}>
-                      <Mail size={10} /> {lead.emailSent ? 'Sent' : 'Email'}
-                    </button>
-                  )}
-
-                  {/* DM Action */}
-                  {lead.status === 'new' && (
-                    <button onClick={() => updateStatus(lead.id, 'dm_sent')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Send size={10} /> DM</button>
-                  )}
-                  {lead.status === 'dm_sent' && (
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold ${timer.color}`}>{timer.urgent ? "⚠️ TIME UP" : timer.label}</span>
-                      <button onClick={() => updateStatus(lead.id, 'friends_dmed')} className="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded">Friends</button>
-                    </div>
-                  )}
-                  {lead.status === 'friends_dmed' && <span className="text-slate-500 text-[10px] line-through">Done</span>}
-
-                  {/* Delete */}
-                  <button onClick={() => deleteLead(lead.id)} className="text-slate-600 hover:text-red-400 p-1 rounded hover:bg-slate-700/50"><Trash2 size={14} /></button>
-                </div>
-              </div>
-            )
-          })}
-          {filteredLeads.length === 0 && <div className="text-center text-slate-500 py-10">No leads match your filters.</div>}
-          {leads.length === 0 && <div className="text-center text-slate-500 py-10">No leads yet. Add one!</div>}
+                )
+              })}
+              {filteredLeads.length === 0 && <div className="text-center text-slate-500 py-10">No leads match your filters.</div>}
+              {leads.length === 0 && !loading && <div className="text-center text-slate-500 py-10">No leads yet. Add one!</div>}
+            </>
+          )}
         </section>
       </div>
     </div>
