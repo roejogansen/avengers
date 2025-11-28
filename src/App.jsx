@@ -223,22 +223,23 @@ export default function CRM() {
   });
 
   const filteredLeads = sortedLeads.filter(l => {
-    // Status filters
-    if (filter === 'all') {
-      // Continue to country filter
-    } else if (filter === 'inspiration') {
+    // Inspiration filter: ONLY show inspiration leads
+    if (filter === 'inspiration') {
       if (!l.isInspiration) return false;
     } else {
-      // Exclude inspiration leads from workflow filters
+      // All other filters: EXCLUDE inspiration leads
       if (l.isInspiration) return false;
 
-      const timer = getTimerStatus(l.dmSentAt);
-      if (filter === 'urgent' && !timer.urgent) return false;
-      if (filter === 'new' && l.status !== 'new') return false;
-      if (filter === 'pending' && !(l.status === 'dm_sent' && !timer.urgent)) return false;
-      if (filter === 'unicorn' && !l.isUnicorn) return false;
-      if (filter === '10k' && !l.has10k) return false;
-      if (filter === 'both' && !(l.isUnicorn && l.has10k)) return false;
+      // Status filters (only apply to non-inspiration leads)
+      if (filter !== 'all') {
+        const timer = getTimerStatus(l.dmSentAt);
+        if (filter === 'urgent' && !timer.urgent) return false;
+        if (filter === 'new' && l.status !== 'new') return false;
+        if (filter === 'pending' && !(l.status === 'dm_sent' && !timer.urgent)) return false;
+        if (filter === 'unicorn' && !l.isUnicorn) return false;
+        if (filter === '10k' && !l.has10k) return false;
+        if (filter === 'both' && !(l.isUnicorn && l.has10k)) return false;
+      }
     }
 
     // Country filter
