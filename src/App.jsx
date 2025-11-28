@@ -246,7 +246,7 @@ export default function CRM() {
 
         {/* FORM */}
         <section className="bg-slate-800 rounded-xl p-6 border border-slate-700 h-fit sticky top-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><UserPlus /> Quick Add</h2>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><UserPlus /> Avengers Assemble</h2>
           <form onSubmit={addLead} className="space-y-4">
             <input
               className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white focus:border-indigo-500 outline-none"
@@ -346,8 +346,14 @@ export default function CRM() {
                     <div className="flex items-center gap-2 shrink-0">
                       {/* Email Action */}
                       {lead.email && (
-                        <button onClick={() => toggleEmailSent(lead.id)} className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}>
-                          <Mail size={10} /> {lead.emailSent ? 'Sent' : 'Email'}
+                        <button
+                          onClick={() => {
+                            window.location.href = `mailto:${lead.email}`;
+                            if (!lead.emailSent) toggleEmailSent(lead.id);
+                          }}
+                          className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                        >
+                          <Mail size={10} /> {lead.emailSent ? 'Email sent' : 'Email'}
                         </button>
                       )}
 
