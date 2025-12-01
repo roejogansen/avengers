@@ -253,7 +253,7 @@ export default function CRM() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* FORM */}
-        <section className="bg-slate-800 rounded-xl p-6 border border-slate-700 h-fit sticky top-6">
+        <section className="bg-slate-800 rounded-xl p-6 border border-slate-700 h-fit lg:sticky lg:top-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><UserPlus /> Avengers Assemble</h2>
           <form onSubmit={addLead} className="space-y-4">
             <input
@@ -284,19 +284,19 @@ export default function CRM() {
               </datalist>
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setFormData({ ...formData, isUnicorn: !formData.isUnicorn })} className={`flex-1 p-2 rounded border ${formData.isUnicorn ? 'bg-pink-900 border-pink-500 text-pink-400' : 'border-slate-700 text-slate-500'}`}>🦄</button>
-              <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-2 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>10k ⭐️</button>
-              <button type="button" onClick={() => setFormData({ ...formData, isInspiration: !formData.isInspiration })} className={`flex-1 p-2 rounded border ${formData.isInspiration ? 'bg-purple-900 border-purple-500 text-purple-400' : 'border-slate-700 text-slate-500'}`}>💡</button>
+              <button type="button" onClick={() => setFormData({ ...formData, isUnicorn: !formData.isUnicorn })} className={`flex-1 p-3 rounded border ${formData.isUnicorn ? 'bg-pink-900 border-pink-500 text-pink-400' : 'border-slate-700 text-slate-500'}`}>🦄</button>
+              <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-3 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>10k ⭐️</button>
+              <button type="button" onClick={() => setFormData({ ...formData, isInspiration: !formData.isInspiration })} className={`flex-1 p-3 rounded border ${formData.isInspiration ? 'bg-purple-900 border-purple-500 text-purple-400' : 'border-slate-700 text-slate-500'}`}>💡</button>
             </div>
-            <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-3 rounded flex justify-center items-center gap-2">Add to Pipeline <ArrowRight size={16} /></button>
+            <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-3 rounded flex justify-center items-center gap-2 active:scale-95 transition-transform">Add to Pipeline <ArrowRight size={16} /></button>
           </form>
         </section>
 
         {/* LIST */}
         <section className="lg:col-span-2 space-y-3">
-          <div className="flex gap-2 pb-2 flex-wrap items-center">
+          <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar items-center -mx-6 px-6 lg:mx-0 lg:px-0 lg:flex-wrap">
             {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both', 'inspiration'].map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1 rounded-full text-xs font-bold uppercase ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+              <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap shrink-0 ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
                 {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f === 'inspiration' ? '💡 Inspo' : f}
               </button>
             ))}
@@ -305,7 +305,7 @@ export default function CRM() {
             <select
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
-              className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700 outline-none focus:border-indigo-500"
+              className="px-4 py-2 rounded-full text-xs font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700 outline-none focus:border-indigo-500 whitespace-nowrap shrink-0"
             >
               <option value="all">All Countries</option>
               {uniqueCountries.map(country => (
@@ -323,37 +323,37 @@ export default function CRM() {
                 const isUrgent = lead.status === 'dm_sent' && timer.urgent;
 
                 return (
-                  <div key={lead.id} className={`bg-slate-800 rounded-lg p-2 border relative flex items-center justify-between gap-3 ${isUrgent ? 'border-red-500' : 'border-slate-700'}`}>
+                  <div key={lead.id} className={`bg-slate-800 rounded-lg p-3 border relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isUrgent ? 'border-red-500' : 'border-slate-700'}`}>
                     {/* Left Side: Info */}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap mb-2 sm:mb-0">
                         <a
                           href={`https://www.instagram.com/${lead.handle}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-bold text-base text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                          className="font-bold text-lg text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
                         >
                           @{lead.handle}
-                          <Instagram size={14} className="opacity-60" />
+                          <Instagram size={16} className="opacity-60" />
                         </a>
 
                         {/* Badges */}
-                        <div className="flex gap-1 text-[10px]">
-                          {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1 rounded bg-pink-500/10">Unicorn</span>}
-                          {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1 rounded bg-blue-500/10">10k+</span>}
-                          {lead.isInspiration && <span className="text-purple-400 border border-purple-500/30 px-1 rounded bg-purple-500/10">Inspo</span>}
-                          {lead.country && <span className="text-slate-400 border border-slate-700 px-1 rounded">{lead.country}</span>}
+                        <div className="flex gap-1 text-xs">
+                          {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1.5 py-0.5 rounded bg-pink-500/10">Unicorn</span>}
+                          {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded bg-blue-500/10">10k+</span>}
+                          {lead.isInspiration && <span className="text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded bg-purple-500/10">Inspo</span>}
+                          {lead.country && <span className="text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">{lead.country}</span>}
                         </div>
 
-                        <span className="text-[10px] text-slate-500 flex items-center gap-1 ml-1">
-                          <Clock size={10} />
+                        <span className="text-xs text-slate-500 flex items-center gap-1 ml-1">
+                          <Clock size={12} />
                           {formatDateTime(lead.createdAt)}
                         </span>
                       </div>
                     </div>
 
                     {/* Right Side: Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
                       {/* Email Action */}
                       {lead.email && (
                         <button
@@ -361,26 +361,26 @@ export default function CRM() {
                             window.location.href = `mailto:${lead.email}`;
                             if (!lead.emailSent) toggleEmailSent(lead.id);
                           }}
-                          className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 transition-colors ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                          className={`text-xs px-3 py-1.5 rounded flex items-center gap-1 transition-colors whitespace-nowrap ${lead.emailSent ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
                         >
-                          <Mail size={10} /> {lead.emailSent ? 'Email sent' : 'Email'}
+                          <Mail size={12} /> {lead.emailSent ? 'Email sent' : 'Email'}
                         </button>
                       )}
 
                       {/* DM Action */}
                       {lead.status === 'new' && (
-                        <button onClick={() => updateStatus(lead.id, 'dm_sent')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Send size={10} /> DM</button>
+                        <button onClick={() => updateStatus(lead.id, 'dm_sent')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 whitespace-nowrap"><Send size={12} /> DM</button>
                       )}
                       {lead.status === 'dm_sent' && (
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold ${timer.color}`}>{timer.urgent ? "⚠️ TIME UP" : timer.label}</span>
-                          <button onClick={() => updateStatus(lead.id, 'friends_dmed')} className="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded">Friends</button>
+                          <span className={`text-xs font-bold whitespace-nowrap ${timer.color}`}>{timer.urgent ? "⚠️ TIME UP" : timer.label}</span>
+                          <button onClick={() => updateStatus(lead.id, 'friends_dmed')} className="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded whitespace-nowrap">Friends</button>
                         </div>
                       )}
-                      {lead.status === 'friends_dmed' && <span className="text-slate-500 text-[10px] line-through">Done</span>}
+                      {lead.status === 'friends_dmed' && <span className="text-slate-500 text-xs line-through whitespace-nowrap">Done</span>}
 
                       {/* Delete */}
-                      <button onClick={() => deleteLead(lead.id)} className="text-slate-600 hover:text-red-400 p-1 rounded hover:bg-slate-700/50"><Trash2 size={14} /></button>
+                      <button onClick={() => deleteLead(lead.id)} className="text-slate-600 hover:text-red-400 p-1.5 rounded hover:bg-slate-700/50"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 )
