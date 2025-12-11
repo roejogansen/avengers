@@ -252,6 +252,7 @@ export default function CRM() {
         if (filter === 'unicorn' && !l.isUnicorn) return false;
         if (filter === '10k' && !l.has10k) return false;
         if (filter === 'both' && !(l.isUnicorn && l.has10k)) return false;
+        if (filter === 'of' && !l.isOF) return false;
       }
     }
 
@@ -320,9 +321,9 @@ export default function CRM() {
           </div>
 
           <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar items-center -mx-6 px-6 lg:mx-0 lg:px-0 lg:flex-wrap">
-            {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both', 'inspiration'].map(f => (
+            {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both', 'of', 'inspiration'].map(f => (
               <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap shrink-0 ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f === 'inspiration' ? '💡 Inspo' : f}
+                {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f === 'inspiration' ? '💡 Inspo' : f === 'of' ? 'OF 🍑' : f}
               </button>
             ))}
 
