@@ -96,6 +96,7 @@ export default function CRM() {
         is_unicorn: formData.isUnicorn,
         has_10k: formData.has10k,
         is_inspiration: formData.isInspiration,
+        is_of: formData.isOF,
         status: 'new',
         email_sent: false,
         created_at: new Date().toISOString(),
