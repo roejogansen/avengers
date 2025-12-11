@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles, Instagram, Users, Mail, Globe, Clock,
   CheckCircle, AlertTriangle, Trash2, Send, UserPlus,
-  ArrowRight, Download, Check
+  ArrowRight, Download, Check, Search
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -10,10 +10,11 @@ export default function CRM() {
   const [leads, setLeads] = useState([]);
   const [filter, setFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    handle: '', country: '', email: '', isUnicorn: false, has10k: false, isInspiration: false,
+    handle: '', country: '', email: '', isUnicorn: false, has10k: false, isInspiration: false, isOF: false,
   });
 
   // Fetch leads on mount
@@ -40,6 +41,7 @@ export default function CRM() {
         isUnicorn: lead.is_unicorn,
         has10k: lead.has_10k,
         isInspiration: lead.is_inspiration || false,
+        isOF: lead.is_of || false,
         status: lead.status,
         emailSent: lead.email_sent,
         createdAt: new Date(lead.created_at).getTime(),
@@ -111,7 +113,7 @@ export default function CRM() {
       fetchLeads();
 
       // Reset form completely
-      setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false, isInspiration: false });
+      setFormData({ handle: '', country: '', email: '', isUnicorn: false, has10k: false, isInspiration: false, isOF: false });
     } catch (error) {
       console.error('Error adding lead:', error.message);
       alert('Error adding lead!');
@@ -223,6 +225,16 @@ export default function CRM() {
   });
 
   const filteredLeads = sortedLeads.filter(l => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesHandle = l.handle.toLowerCase().includes(query);
+      const matchesCountry = l.country && l.country.toLowerCase().includes(query);
+      const matchesEmail = l.email && l.email.toLowerCase().includes(query);
+
+      if (!matchesHandle && !matchesCountry && !matchesEmail) return false;
+    }
+
     // Inspiration filter: ONLY show inspiration leads
     if (filter === 'inspiration') {
       if (!l.isInspiration) return false;
@@ -287,6 +299,7 @@ export default function CRM() {
               <button type="button" onClick={() => setFormData({ ...formData, isUnicorn: !formData.isUnicorn })} className={`flex-1 p-3 rounded border ${formData.isUnicorn ? 'bg-pink-900 border-pink-500 text-pink-400' : 'border-slate-700 text-slate-500'}`}>🦄</button>
               <button type="button" onClick={() => setFormData({ ...formData, has10k: !formData.has10k })} className={`flex-1 p-3 rounded border ${formData.has10k ? 'bg-blue-900 border-blue-500 text-blue-400' : 'border-slate-700 text-slate-500'}`}>10k ⭐️</button>
               <button type="button" onClick={() => setFormData({ ...formData, isInspiration: !formData.isInspiration })} className={`flex-1 p-3 rounded border ${formData.isInspiration ? 'bg-purple-900 border-purple-500 text-purple-400' : 'border-slate-700 text-slate-500'}`}>💡</button>
+              <button type="button" onClick={() => setFormData({ ...formData, isOF: !formData.isOF })} className={`flex-1 p-3 rounded border ${formData.isOF ? 'bg-orange-900 border-orange-500 text-orange-400' : 'border-slate-700 text-slate-500'}`}>OF 🍑</button>
             </div>
             <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-3 rounded flex justify-center items-center gap-2 active:scale-95 transition-transform">Add to Pipeline <ArrowRight size={16} /></button>
           </form>
@@ -294,6 +307,17 @@ export default function CRM() {
 
         {/* LIST */}
         <section className="lg:col-span-2 space-y-3">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+            <input
+              className="w-full bg-slate-800 border border-slate-700 p-3 pl-10 rounded-lg text-white focus:border-indigo-500 outline-none"
+              placeholder="Search leads..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+
           <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar items-center -mx-6 px-6 lg:mx-0 lg:px-0 lg:flex-wrap">
             {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both', 'inspiration'].map(f => (
               <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap shrink-0 ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
@@ -342,6 +366,7 @@ export default function CRM() {
                           {lead.isUnicorn && <span className="text-pink-400 border border-pink-500/30 px-1.5 py-0.5 rounded bg-pink-500/10">Unicorn</span>}
                           {lead.has10k && <span className="text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded bg-blue-500/10">10k+</span>}
                           {lead.isInspiration && <span className="text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded bg-purple-500/10">Inspo</span>}
+                          {lead.isOF && <span className="text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded bg-orange-500/10">OF 🍑</span>}
                           {lead.country && <span className="text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">{lead.country}</span>}
                         </div>
 
