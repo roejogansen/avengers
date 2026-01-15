@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles, Instagram, Users, Mail, Globe, Clock,
   CheckCircle, AlertTriangle, Trash2, Send, UserPlus,
-  ArrowRight, Download, Check, Search
+  ArrowRight, Download, Check, Search, ChevronDown
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 export default function CRM() {
   const [leads, setLeads] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('all');
+  const [activeTags, setActiveTags] = useState([]);
   const [countryFilter, setCountryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -226,7 +227,7 @@ export default function CRM() {
   });
 
   const filteredLeads = sortedLeads.filter(l => {
-    // Search filter
+    // 1. Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesHandle = l.handle.toLowerCase().includes(query);
@@ -236,31 +237,44 @@ export default function CRM() {
       if (!matchesHandle && !matchesCountry && !matchesEmail) return false;
     }
 
-    // Inspiration filter: ONLY show inspiration leads
-    if (filter === 'inspiration') {
+    // 2. Tag Filters (Additive)
+    // Special handling for Inspiration: 
+    // If 'inspiration' tag is active, ONLY show inspiration leads.
+    // If 'inspiration' tag is NOT active, HIDE inspiration leads.
+    if (activeTags.includes('inspiration')) {
       if (!l.isInspiration) return false;
     } else {
-      // All other filters: EXCLUDE inspiration leads
       if (l.isInspiration) return false;
-
-      // Status filters (only apply to non-inspiration leads)
-      if (filter !== 'all') {
-        const timer = getTimerStatus(l.dmSentAt);
-        if (filter === 'urgent' && !timer.urgent) return false;
-        if (filter === 'new' && l.status !== 'new') return false;
-        if (filter === 'pending' && !(l.status === 'dm_sent' && !timer.urgent)) return false;
-        if (filter === 'unicorn' && !l.isUnicorn) return false;
-        if (filter === '10k' && !l.has10k) return false;
-        if (filter === 'both' && !(l.isUnicorn && l.has10k)) return false;
-        if (filter === 'of' && !l.isOF) return false;
-      }
     }
 
-    // Country filter
+    // Other tags
+    if (activeTags.includes('unicorn') && !l.isUnicorn) return false;
+    if (activeTags.includes('10k') && !l.has10k) return false;
+    if (activeTags.includes('of') && !l.isOF) return false;
+
+    // 3. View Mode Filters (Exclusive)
+    const timer = getTimerStatus(l.dmSentAt);
+
+    if (viewMode === 'urgent') {
+      if (!timer.urgent) return false;
+    } else if (viewMode === 'new') {
+      if (l.status !== 'new') return false;
+    } else if (viewMode === 'pending') {
+      if (!(l.status === 'dm_sent' && !timer.urgent)) return false;
+    }
+    // 'all' passes everything remaining
+
+    // 4. Country filter
     if (countryFilter !== 'all' && l.country !== countryFilter) return false;
 
     return true;
   });
+
+  const toggleTag = (tag) => {
+    setActiveTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6">
@@ -320,24 +334,53 @@ export default function CRM() {
             />
           </div>
 
-          <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar items-center -mx-6 px-6 lg:mx-0 lg:px-0 lg:flex-wrap">
-            {['all', 'urgent', 'new', 'pending', 'unicorn', '10k', 'both', 'of', 'inspiration'].map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap shrink-0 ${filter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                {f === 'unicorn' ? '🦄 Unicorn' : f === '10k' ? '⭐️ 10k+' : f === 'both' ? '🦄⭐️ Both' : f === 'inspiration' ? '💡 Inspo' : f === 'of' ? 'OF 🍑' : f}
-              </button>
-            ))}
+          <div className="flex flex-col gap-3 pb-2 lg:flex-row lg:items-center lg:flex-wrap">
+            {/* Group 1: View Modes (Exclusive) */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar items-center -mx-6 px-6 lg:mx-0 lg:px-0">
+              {['all', 'urgent', 'new', 'pending'].map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap shrink-0 transition-colors ${viewMode === mode ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                >
+                  {mode}
+                </button>
+              ))}
+              <div className="w-px h-6 bg-slate-700 mx-1 hidden lg:block"></div>
+            </div>
+
+            {/* Group 2: Tags (Toggles) */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar items-center -mx-6 px-6 lg:mx-0 lg:px-0">
+              {[
+                { id: 'unicorn', label: '🦄 Unicorn' },
+                { id: '10k', label: '⭐️ 10k+' },
+                { id: 'of', label: 'OF 🍑' },
+                { id: 'inspiration', label: '💡 Inspo' }
+              ].map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => toggleTag(tag.id)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap shrink-0 transition-all border ${activeTags.includes(tag.id) ? 'bg-indigo-900/50 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-transparent text-slate-400 hover:bg-slate-700'}`}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
 
             {/* Country Filter Dropdown */}
-            <select
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              className="px-4 py-2 rounded-full text-xs font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700 outline-none focus:border-indigo-500 whitespace-nowrap shrink-0"
-            >
-              <option value="all">All Countries</option>
-              {uniqueCountries.map(country => (
-                <option key={country} value={country}>{country}</option>
-              ))}
-            </select>
+            <div className="relative shrink-0">
+              <select
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+                className="appearance-none w-full min-w-[140px] pl-4 pr-10 py-2 rounded-full text-xs font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer"
+              >
+                <option value="all">All Countries</option>
+                {uniqueCountries.map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+            </div>
           </div>
 
           {loading ? (
